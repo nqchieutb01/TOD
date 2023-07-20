@@ -45,3 +45,19 @@
   "aspn_gen": ""
 }
 ```
+Multiwoz 2.1
+```
+dst_small:           Join: 53.80 F1: 91.79 Acc: 97.05
+report in paper:     Join: 53.33 F1: 91.68
+
+dst_small_reinforce: Join: 53.19 F1: 91.61 Acc: 96.95
+report in paper:     Join: 54.97 F1: 92.01
+
+nlg_small:         : inform: 85.49 success: 75.88 BLEU: 18.99 combine: 99.67
+Report in paper:     inform: 88.90 success: 81.40 BLEU: 18.73 combine: 103.88
+
+nlg_small_reinforce: inform: 98.50 success: 61.76 BLEU: 07.58 combine: 87.71
+Report in paper:     inform: 97.00 success: 87.40 BLEU: 17.12 combine: 109.32
+
+```
+
