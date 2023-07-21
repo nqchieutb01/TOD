@@ -9,8 +9,7 @@ Ex: "bspn_gen": "[restaurant] pricerange cheap area centre"
     --QUERY--DB--> {'restaurant':15}   // get 15 matchs
     --> 'db' : '[db_3]'
 
-resp_gen = T5_NLG(context[i] + db) // generate NLG
-
+resp_gen = T5_NLG(context[i] + db) // generate NLG 
 {
   "dial_id": "mul2499",
   "turn_num": 0,
@@ -56,7 +55,7 @@ resp_gen = T5_NLG(context[i] + db) // generate NLG
   "aspn_gen": ""
 }
 ```
-Multiwoz 2.1
+Evaluate on multiwoz 2.1 - used pretrained-PPTOD
 ```
 dst_small:           Join: 53.80 F1: 91.79 Acc: 97.05
 report in paper:     Join: 53.33 F1: 91.68
@@ -71,8 +70,15 @@ nlg_small_reinforce: inform: 98.50 success: 61.76 BLEU: 07.58 combine: 87.71
 Report in paper:     inform: 97.00 success: 87.40 BLEU: 17.12 combine: 109.32
 
 ```
-
-
-
+### REINFORCE
+```
+bleu, success, match = self.evaluator.validation_metric(pack)  // calculate after decode
+combined_score = 0.5 * (success + match) + bleu
+reward = beta * success + (1 - beta) * bleu + 1  // 1 is for avoiding zero reward
+loss_tensor = -(loss_tensor * reward / 100)      // 100 is for normalization for balancing with categorical cross entropy loss
+loss_tensor = loss_tensor.mean()
+policy_loss = loss_tensor
+loss = self.alpha * policy_loss + (1 - self.alpha) * loss
+```
 
 
