@@ -1,5 +1,16 @@
 # TOD
 ```
+
+context[i] = context[i-1] + user_input[i]
+
+bspn_gen = T5_DST(context[i]) // generate belief state
+Ex: "bspn_gen": "[restaurant] pricerange cheap area centre"
+    --RULE--BASE--> {'restaurant': {'pricerange': 'cheap', 'area': 'centre'}}
+    --QUERY--DB--> {'restaurant':15}   // get 15 matchs
+    --> 'db' : '[db_3]'
+
+resp_gen = T5_NLG(context[i] + db) // generate NLG
+
 {
   "dial_id": "mul2499",
   "turn_num": 0,
@@ -60,4 +71,8 @@ nlg_small_reinforce: inform: 98.50 success: 61.76 BLEU: 07.58 combine: 87.71
 Report in paper:     inform: 97.00 success: 87.40 BLEU: 17.12 combine: 109.32
 
 ```
+
+
+
+
 
