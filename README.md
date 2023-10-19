@@ -1,84 +1,77 @@
-# TOD
+# SynTOD
+
+This is code for the paper "SynTOD: An Augmented Synthetic Response Approach for Robust End-to-end Task-Oriented Dialogue System"
+
+
+## Checkout source code and data from github repository
+To download [data.zip](link) properly, git lfs(Large File Storage) extension must be installed.
 ```
-
-context[i] = context[i-1] + user_input[i]
-
-bspn_gen = T5_DST(context[i]) // generate belief state
-Ex: "bspn_gen": "[restaurant] pricerange cheap area centre"
-    --RULE--BASE--> {'restaurant': {'pricerange': 'cheap', 'area': 'centre'}}
-    --QUERY--DB--> {'restaurant':15}   // get 15 matchs
-    --> 'db' : '[db_3]'
-
-resp_gen = T5_NLG(context[i] + db) // generate NLG 
-{
-  "dial_id": "mul2499",
-  "turn_num": 0,
-  "user": "i am looking for a cheap restaurant in the center of the city .",
-  "bspn": "[restaurant] pricerange cheap area centre",
-  "bsdx": "[restaurant] pricerange area",
-  "aspn": "[restaurant] [request] food",
-  "bspn_reform": "[restaurant] pricerange is cheap , area is centre",
-  "bsdx_reform": "[restaurant] pricerange , area",
-  "aspn_reform": "[restaurant] [request] food",
-  "resp": "do you have any specific type of food you would like ?",
-  "dspn_gen": "[restaurant]",
-  "dspn": "[restaurant]",
-  "db": "[db_3]",
-  "pointer": "restaurant: >3; ",
-  "turn_domain": [
-    "[restaurant]"
-  ],
- "resp_gen": "there are [value_choice] restaurant -s that meet your criteria . do you have a food type preference ?",
-  "bspn_gen": "[restaurant] pricerange cheap area centre",
-  "aspn_gen": ""
-}
-{
-  "dial_id": "mul2499",
-  "turn_num": 1,
-  "user": "no , i am not picky as long as the price -s are low .",
-  "bspn": "[restaurant] pricerange cheap area centre",
-  "bsdx": "[restaurant] pricerange area",
-  "aspn": "[restaurant] [inform] price name food area [offerbook]",
-  "bspn_reform": "[restaurant] pricerange is cheap , area is centre",
-  "bsdx_reform": "[restaurant] pricerange , area",
-  "aspn_reform": "[restaurant] [inform] price name food area [offerbook]",
-  "resp": "there is a [value_price] [value_food] restaurant called the [value_name] located in the [value_area] of town . would you like to book a table ?",
-  "dspn_gen": "[restaurant]",
-  "dspn": "[restaurant]",
-  "db": "[db_3]",
-  "pointer": "restaurant: >3; ",
-  "turn_domain": [
-    "[restaurant]"
-  ],
-  "resp_gen": "[value_name] is a [value_food] restaurant in the [value_area] . would you like me to book a table for you ?",
-  "bspn_gen": "[restaurant] pricerange cheap area centre food dontcare",
-  "aspn_gen": ""
-}
+git lfs install
+git lfs pull
+git checkout -f HEAD
 ```
-Evaluate on multiwoz 2.1 - used pretrained-PPTOD
-```
-dst_small:           Join: 53.80 F1: 91.79 Acc: 97.05
-report in paper:     Join: 53.33 F1: 91.68
+## Environment setting
 
-dst_small_reinforce: Join: 53.19 F1: 91.61 Acc: 96.95
-report in paper:     Join: 54.97 F1: 92.01
+Our python version is 3.6.9.
 
-nlg_small:         : inform: 85.49 success: 75.88 BLEU: 18.99 combine: 99.67
-Report in paper:     inform: 88.90 success: 81.40 BLEU: 18.73 combine: 103.88
-
-nlg_small_reinforce: inform: 98.50 success: 61.76 BLEU: 07.58 combine: 87.71
-Report in paper:     inform: 97.00 success: 87.40 BLEU: 17.12 combine: 109.32
+The package can be installed by running the following command.
 
 ```
-### REINFORCE
-```
-bleu, success, match = self.evaluator.validation_metric(pack)  // calculate after decode
-combined_score = 0.5 * (success + match) + bleu
-reward = beta * success + (1 - beta) * bleu + 1  // 1 is for avoiding zero reward
-loss_tensor = -(loss_tensor * reward / 100)      // 100 is for normalization for balancing with categorical cross entropy loss
-loss_tensor = loss_tensor.mean()
-policy_loss = loss_tensor
-loss = self.alpha * policy_loss + (1 - self.alpha) * loss
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
 ```
 
+## Download preprocessed data
 
+For the experiments, we use MultiWOZ2.1 and MultiWOZ2.2.
+You can download at [MultiWOZ](link)
+
+We use the preprocessing scripts implemented by [Zhang et al., 2020](https://arxiv.org/abs/1911.10484). Please refer to [here](https://github.com/thu-spmi/damd-multiwoz/blob/master/data/multi-woz/README.md) for the details.
+
+## Download pre-trained models
+- T5-small (https://huggingface.co/t5-small)
+- PPTOD-small (https://github.com/awslabs/pptod)
+## Training
+
+Our implementation supports a single GPU with 2 phases training. Please use smaller batch sizes if out-of-memory error raises.
+
+First, we train model with original data by following script (please refer to `config.py` to see the detailed configs):
+```
+CUDA_VISIBLE_DEVICES="0" python main.py -run_type train -model_dir ckpt2.1/t5-small -backbone t5-small -version 2.1
+```
+
+The next step, the best checkpoint is ultilized to generate synthetic data:
+```
+CUDA_VISIBLE_DEVICES="0" python main.py -run_type predict -ckpt ckpt2.1/t5-small/ckpt-epoch4 -batch_size 64 -pred_data_type test -output out.json -version 2.1
+```
+After that, combine systhetic data with original data: 
+```
+python data/merge.py 
+```
+
+Finally, set `ADD_SYNTHETIC_DATA = True` in `quick_config.py`  ,
+train model with synthetic data and original data:
+
+```
+CUDA_VISIBLE_DEVICES="0" python main.py -run_type train -model_dir ckpt2.1/t5-small-synthetic -backbone t5-small -version 2.1
+```
+
+The checkpoints will be saved at the end of each epoch (the default training epoch is set to 10).
+
+## Inference
+
+```
+python main.py -run_type predict -ckpt $CHECKPOINT -output $MODEL_OUTPUT -batch_size $BATCH_SIZE
+```
+
+All checkpoints are saved in ```$MODEL_DIR``` with names such as 'ckpt-epoch10-step7053'.
+
+The result file (```$MODEL_OUTPUT```) will be saved in the checkpoint directory.
+
+To reduce inference time, it is recommended to set large ```$BATCH_SIZE```. In our experiemnts, it is set to 16 for inference.
+
+You can download our trained model [here](https://drive.google.com/file/d/1azIdWPgJKa3PTBFE8lZ1B02bfgguKS2u/view?usp=sharing).
+
+## Acknowledgements
+Our code hugely based on (https://github.com/bepoetree/MTTOD) for "Improving End-to-End Task-Oriented Dialogue System with A Simple Auxiliary Task" and
+(https://github.com/Tomiinek/MultiWOZ_Evaluation) for evaluation.
